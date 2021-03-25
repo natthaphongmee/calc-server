@@ -1,0 +1,57 @@
+service: calc-server
+
+frameworkVersion: "2"
+
+custom:
+  settings:
+    CALC_TABLE: calc
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: ap-southeast-1
+  environment: ${self:custom.settings}
+  lambdaHashingVersion: 20201221
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - dynamodb:DescribeTable
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.CALC_TABLE}"
+
+functions:
+  saveCalc:
+    handler: handler.saveCalc
+    events:
+      - http:
+          path: /calc/save
+          method: put
+  getCalc:
+    handler: handler.getCalc
+    events:
+      - http:
+          path: /calc/get
+          method: get
+
+resources:
+  Resources:
+    CalcTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: "id"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.settings.CALC_TABLE}
